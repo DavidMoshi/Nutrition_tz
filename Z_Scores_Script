@@ -1,0 +1,52 @@
+#Z_Scores_Script
+#Author:David_Moshi
+
+#Load packages
+pacman::p_load(rio,  here, janitor, lubridate, matchmaker,
+               epikit, tidyverse,  gtsummary, anthro)
+
+sample <- import("sample.xlsx")
+
+#Matching data for anthro package
+sample1 <- sample %>%
+  rename(sex = chld_sex, age = chld_age_month, lenhei = chld_len, weight = chld_wght) %>%
+  select(sex, age, lenhei, weight)
+
+#Z-scores analysis 
+sample1 <- anthro_zscores(
+  sex = c(sample1$sex),
+  age = c(sample1$age),
+  weight = c(sample1$weight),
+  lenhei = c(sample1$lenhei), is_age_in_month = TRUE
+)
+#sample1 <- export(sample1, "z-scores.xlsx")
+
+#Output table Categories
+sample2 <- sample1 %>%
+  mutate(Stunting = case_when(
+    zlen < -3 ~ "Severe",
+    zlen >= -3 & zlen < -2 ~ "Moderate",
+    zlen >= -2 & zlen <= 3 ~ "Normal",
+    zlen > 3 ~ "Extreme"
+  ),
+  Underweight = case_when(
+    zwei < -3 ~ "Severe",
+    zwei >= -3 & zwei < -2 ~ "Moderate",
+    zwei >= -2 & zwei <= 1 ~ "Normal",
+  ),
+  Wasting = case_when(
+    zbmi < -3 ~ "Severe",
+    zbmi >= -3 & zbmi < -2 ~ "Moderate",
+    zbmi >= -2 & zbmi <= 1 ~ "Normal",
+    zbmi > 1 & zbmi <= 2 ~ "Risk of overweight",
+    zbmi > 2 & zbmi <= 3 ~ "Risk of overweight",
+    zbmi > 3 ~ "Obesity")
+  )
+
+#Table
+sample2 %>%
+  select(csex, Stunting, Underweight, Wasting) %>% 
+  tbl_summary (by = csex) %>% 
+  as_flex_table() %>% 
+print(preview = "docx")
+  
